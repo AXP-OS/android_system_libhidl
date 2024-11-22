@@ -692,6 +692,13 @@ bool handleCastError(const Return<bool>& castReturn, const std::string& descript
               instance.c_str());
         return true;
     }
+    // AXP.OS - workaround to fix:
+    // > getService: unable to call into hwbinder service for android.hardware.camera.provider@2.4::ICameraProvider/legacy/0.
+    //if (strcmp(descriptor.c_str(), "android.hardware.camera.provider@2.4::ICameraProvider") == 0) {
+    //    ALOGW("getService: hwbinder service workaround2 for %s/%s.",
+    //      descriptor.c_str(), instance.c_str());
+    //    return true;
+    //}
     // This can happen due to:
     // 1) No SELinux permissions
     // 2) Other transaction failure (no buffer space, kernel error)
@@ -768,7 +775,8 @@ sp<::android::hidl::base::V1_0::IBase> getRawServiceInternal(const std::string& 
         sleep(1);
     }
 
-    for (int tries = 0; !getStub && (vintfHwbinder || vintfLegacy); tries++) {
+    //for (int tries = 0; !getStub && (vintfHwbinder || vintfLegacy); tries++) {
+    for (int tries = 0; !getStub && (vintfHwbinder); tries++) {
         if (waiter == nullptr && tries > 0) {
             waiter = new Waiter(descriptor, instance, sm);
         }
@@ -797,7 +805,11 @@ sp<::android::hidl::base::V1_0::IBase> getRawServiceInternal(const std::string& 
         }
 
         // In case of legacy or we were not asked to retry, don't.
-        if (vintfLegacy || !retry) break;
+        //if (vintfLegacy || !retry) break;
+        if (!retry) break;
+        if (vintfLegacy){
+            ALOGI("getService: workaound2: retry even if leggy");
+        }
 
         if (waiter != nullptr) {
             ALOGI("getService: Trying again for %s/%s...", descriptor.c_str(), instance.c_str());
